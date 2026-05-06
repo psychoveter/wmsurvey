@@ -981,6 +981,139 @@ function MiniRadar({ model }) {
   );
 }
 
+function Radar({ model }) {
+  const values = AXES.map((a) => model.scores[a.key]);
+  const max = 5;
+  const width = 360;
+  const height = 300;
+  const cx = width / 2;
+  const cy = height / 2;
+  const radius = 90;
+
+  const angleAt = (i) => -Math.PI / 2 + (i * 2 * Math.PI) / AXES.length;
+
+  const ringPoints = (r) =>
+    AXES.map((_, i) => {
+      const a = angleAt(i);
+      return `${cx + r * Math.cos(a)},${cy + r * Math.sin(a)}`;
+    }).join(" ");
+
+  const points = values
+    .map((v, i) => {
+      const a = angleAt(i);
+      const r = radius * (v / max);
+      return `${cx + r * Math.cos(a)},${cy + r * Math.sin(a)}`;
+    })
+    .join(" ");
+
+  const labelFor = (i) => {
+    const a = angleAt(i);
+    const lr = radius + 22;
+    const x = cx + lr * Math.cos(a);
+    const y = cy + lr * Math.sin(a);
+    const cosA = Math.cos(a);
+    let anchor = "middle";
+    if (cosA > 0.2) anchor = "start";
+    else if (cosA < -0.2) anchor = "end";
+    return { x, y, anchor };
+  };
+
+  return (
+    <svg
+      viewBox={`0 0 ${width} ${height}`}
+      className="h-full w-full max-w-[22rem]"
+      role="img"
+      aria-label="radar chart of model scores"
+    >
+      {[1, 2, 3, 4, 5].map((step) => (
+        <polygon
+          key={step}
+          points={ringPoints((radius * step) / max)}
+          fill="none"
+          stroke="rgba(255,255,255,.10)"
+          strokeWidth="1"
+        />
+      ))}
+
+      {AXES.map((_, i) => {
+        const a = angleAt(i);
+        return (
+          <line
+            key={`axis-${i}`}
+            x1={cx}
+            y1={cy}
+            x2={cx + radius * Math.cos(a)}
+            y2={cy + radius * Math.sin(a)}
+            stroke="rgba(255,255,255,.18)"
+          />
+        );
+      })}
+
+      {[1, 2, 3, 4, 5].map((step) => (
+        <text
+          key={`scale-${step}`}
+          x={cx + 4}
+          y={cy - (radius * step) / max + 3}
+          fill="rgba(255,255,255,.35)"
+          fontSize="9"
+        >
+          {step}
+        </text>
+      ))}
+
+      <polygon
+        points={points}
+        fill="rgba(255,255,255,.22)"
+        stroke="white"
+        strokeWidth="1.8"
+      />
+
+      {values.map((v, i) => {
+        const a = angleAt(i);
+        const r = radius * (v / max);
+        return (
+          <circle
+            key={`dot-${i}`}
+            cx={cx + r * Math.cos(a)}
+            cy={cy + r * Math.sin(a)}
+            r={2.5}
+            fill="white"
+          />
+        );
+      })}
+
+      {AXES.map((axis, i) => {
+        const { x, y, anchor } = labelFor(i);
+        return (
+          <g key={`lbl-${i}`}>
+            <text
+              x={x}
+              y={y}
+              fontSize="11"
+              fill="rgba(255,255,255,.85)"
+              textAnchor={anchor}
+              dominantBaseline="middle"
+              style={{ fontWeight: 500 }}
+            >
+              {axis.label}
+            </text>
+            <text
+              x={x}
+              y={y + 12}
+              fontSize="10"
+              fill="rgba(255,255,255,.55)"
+              textAnchor={anchor}
+              dominantBaseline="middle"
+            >
+              {values[i]}/5
+            </text>
+          </g>
+        );
+      })}
+    </svg>
+  );
+}
+
 function ModelCard({ model, selected, onClick }) {
   const Icon = model.icon;
   return (
@@ -1035,7 +1168,7 @@ function DetailPanel({ model }) {
         </div>
       </div>
 
-      <div className="mt-6 grid grid-cols-1 gap-5 lg:grid-cols-[1fr_auto]">
+      <div className="mt-6 grid grid-cols-1 gap-5 lg:grid-cols-[1fr_320px]">
         <div className="rounded-3xl border border-white/10 bg-white/[.05] p-4">
           <h4 className="flex items-center gap-2 font-semibold text-white">
             <TargetIcon className="h-4 w-4 text-white" />
@@ -1044,7 +1177,7 @@ function DetailPanel({ model }) {
           <p className="mt-3 leading-relaxed text-zinc-300">{model.details}</p>
         </div>
         <div className="flex items-center justify-center rounded-3xl border border-white/10 bg-white/[.05] p-4">
-          <MiniRadar model={model} />
+          <Radar model={model} />
         </div>
       </div>
 
