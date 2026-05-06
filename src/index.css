@@ -1,0 +1,28 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+/* KaTeX tuning for dark theme */
+.katex {
+  color: inherit;
+  font-size: 1.05em;
+}
+
+.katex-display {
+  margin: 0;
+  padding: 0.25rem 0;
+}
+
+.katex-display > .katex {
+  white-space: nowrap;
+}
+
+.katex-block .katex-display {
+  text-align: left;
+}
