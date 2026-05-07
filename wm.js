@@ -709,103 +709,197 @@ function DetailPanel({ model }) {
   );
 }
 
+/* --------------------------- Collapse helpers ----------------------------- */
+
+function ChevronIcon({ open }) {
+  return (
+    <svg
+      viewBox="0 0 16 16"
+      className={`h-4 w-4 shrink-0 text-zinc-400 transition-transform ${
+        open ? "rotate-180" : ""
+      }`}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <polyline points="3 6 8 11 13 6" />
+    </svg>
+  );
+}
+
+const FUTURE_STACK = [
+  "multimodal sensors",
+  "object-centric spatial memory",
+  "causal-relational graph",
+  "belief state",
+  "hierarchical skills",
+  "generative renderer",
+  "counterfactual planner",
+  "L3 evolver loop",
+];
+
 /* --------------------------- Taxonomy overview ---------------------------- */
 
 function TaxonomyOverview() {
+  const [open, setOpen] = useState(true);
+
   return (
-    <section className="mt-6 rounded-[2rem] border border-white/10 bg-white/[.05] p-5 md:p-6">
-      <div className="flex flex-wrap items-center gap-3">
+    <section className="mt-6 overflow-hidden rounded-[2rem] border border-white/10 bg-white/[.05]">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center gap-3 px-5 py-3 text-left transition hover:bg-white/[.03] md:px-6"
+        aria-expanded={open}
+      >
         <LayersIcon className="h-5 w-5 text-white" />
-        <h2 className="text-xl font-bold text-white md:text-2xl">
-          Таксономия «levels × laws»
+        <h2 className="text-base font-bold text-white md:text-lg">
+          Таксономия «levels × laws» + контур будущей world model
         </h2>
+        <span className="hidden flex-wrap items-center gap-1 text-[11px] text-zinc-500 sm:flex">
+          {LEVELS.map((l) => (
+            <span key={l.id} className="font-mono">
+              {l.id}
+            </span>
+          )).reduce((acc, el, i) => (i ? [...acc, " · ", el] : [el]), [])}
+          <span className="mx-1">×</span>
+          {REGIMES.map((r) => (
+            <span key={r.id}>{r.id}</span>
+          )).reduce((acc, el, i) => (i ? [...acc, " · ", el] : [el]), [])}
+        </span>
         <a
           href="https://arxiv.org/abs/2604.22748"
           target="_blank"
           rel="noreferrer"
-          className="text-xs text-zinc-400 underline-offset-4 hover:text-white hover:underline"
+          onClick={(e) => e.stopPropagation()}
+          className="ml-auto hidden text-[11px] text-zinc-400 underline-offset-4 hover:text-white hover:underline md:inline"
         >
-          Agentic World Modeling, arXiv:2604.22748
+          arXiv:2604.22748
         </a>
-      </div>
-      <p className="mt-2 max-w-4xl text-sm leading-relaxed text-zinc-300">
-        Архитектурные семьи слева — это «как устроена модель». Чтобы понять, на
-        что она способна, удобно добавить ортогональную ось: <em>capability
-        level</em> (что система умеет) и <em>governing-law regime</em> (какие
-        инварианты ей надо соблюдать). Эта пара даёт диагностический язык: где
-        модель «честно симулирует», где «просто красиво генерит», а где —
-        способна сама пересмотреть свой стэк.
-      </p>
+        <ChevronIcon open={open} />
+      </button>
 
-      <div className="mt-5 grid grid-cols-1 gap-4 lg:grid-cols-3">
-        {LEVELS.map((lvl) => (
-          <div
-            key={lvl.id}
-            className="rounded-2xl border border-white/10 bg-black/25 p-4"
-          >
-            <div className="flex items-center gap-2">
-              <LevelBadge level={lvl.id} size="lg" />
-              <span className="text-sm text-zinc-400">{lvl.short}</span>
-            </div>
-            <p className="mt-3 text-sm leading-relaxed text-zinc-300">{lvl.desc}</p>
-          </div>
-        ))}
-      </div>
-
-      <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {REGIMES.map((r) => (
-          <div
-            key={r.id}
-            className="rounded-2xl border border-white/10 bg-black/25 p-3"
-          >
-            <div className="flex items-center gap-2">
-              <RegimeBadge regime={r.id} size="lg" />
-            </div>
-            <p className="mt-2 text-sm leading-snug text-zinc-300">{r.short}</p>
-            <p className="mt-1 text-xs leading-snug text-zinc-500">{r.desc}</p>
-          </div>
-        ))}
-      </div>
-
-      <div className="mt-5 grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <div className="rounded-2xl border border-white/10 bg-black/20 p-3">
-          <div className="text-xs uppercase tracking-wide text-zinc-500">
-            Как читать карточку модели
-          </div>
-          <ul className="mt-2 space-y-1.5 text-sm text-zinc-300">
-            <li>
-              <span className="font-mono text-emerald-300">L1/L2/L3</span> —
-              максимальная стабильная capability семьи.
-            </li>
-            <li>
-              <span className="font-mono">Physical/Digital/Social/Scientific</span>{" "}
-              — какие регимы покрываются.
-            </li>
-            <li>
-              <span className="font-mono">SI / FD / OD / ID</span> — какие из 4
-              L1-операторов реально присутствуют (state inference, forward
-              dynamics, observation decoding, inverse dynamics).
-            </li>
-            <li>
-              три L2-полосы — qualitative оценка long-horizon coherence,
-              intervention sensitivity и constraint consistency.
-            </li>
-          </ul>
-        </div>
-        <div className="rounded-2xl border border-white/10 bg-black/20 p-3">
-          <div className="text-xs uppercase tracking-wide text-zinc-500">
-            Почему это важно
-          </div>
-          <p className="mt-2 text-sm leading-relaxed text-zinc-300">
-            Видео-генератор и MuZero оба формально «world models», но один
-            может быть L2 только в смысле long-horizon coherence (без
-            intervention sensitivity), а второй — наоборот. Эта рамка
-            показывает, какой именно planner-критичный признак отсутствует, и
-            подсказывает, где нужны constraints, верификаторы или L3-loop с
-            пересмотром модели.
+      {open && (
+        <div className="space-y-3 border-t border-white/5 px-5 pb-5 pt-4 md:px-6 md:pb-6">
+          <p className="text-xs leading-relaxed text-zinc-300 md:text-sm">
+            Архитектурные семьи слева — это «как устроена модель». Чтобы понять,
+            на что она способна, добавь ортогональную ось:{" "}
+            <em>capability level</em> (что умеет) и{" "}
+            <em>governing-law regime</em> (какие инварианты надо соблюдать).
+            Это диагностический язык: где модель «честно симулирует», где «просто
+            красиво генерит», а где — способна сама пересмотреть свой стэк.
           </p>
+
+          <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
+            {LEVELS.map((lvl) => (
+              <div
+                key={lvl.id}
+                className="rounded-xl border border-white/10 bg-black/25 p-3"
+              >
+                <div className="flex items-center gap-2">
+                  <LevelBadge level={lvl.id} size="lg" />
+                  <span className="text-[11px] leading-snug text-zinc-400">
+                    {lvl.short}
+                  </span>
+                </div>
+                <p className="mt-2 text-xs leading-snug text-zinc-300">
+                  {lvl.desc}
+                </p>
+              </div>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
+            {REGIMES.map((r) => (
+              <div
+                key={r.id}
+                className="rounded-xl border border-white/10 bg-black/25 p-2.5"
+              >
+                <RegimeBadge regime={r.id} size="lg" />
+                <p className="mt-1.5 text-xs leading-snug text-zinc-300">
+                  {r.short}
+                </p>
+                <p className="mt-1 text-[11px] leading-snug text-zinc-500">
+                  {r.desc}
+                </p>
+              </div>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-1 gap-2 lg:grid-cols-2">
+            <div className="rounded-xl border border-white/10 bg-black/20 p-3">
+              <div className="text-[11px] uppercase tracking-wide text-zinc-500">
+                Как читать карточку модели
+              </div>
+              <ul className="mt-1.5 space-y-1 text-xs leading-snug text-zinc-300">
+                <li>
+                  <span className="font-mono text-emerald-300">L1/L2/L3</span> —
+                  максимальная стабильная capability семьи.
+                </li>
+                <li>
+                  <span className="font-mono">
+                    Physical / Digital / Social / Scientific
+                  </span>{" "}
+                  — покрываемые регимы.
+                </li>
+                <li>
+                  <span className="font-mono">SI / FD / OD / ID</span> — 4
+                  L1-оператора (state inference, forward dynamics, observation
+                  decoding, inverse dynamics).
+                </li>
+                <li>
+                  3 L2-полосы — long-horizon coherence, intervention sensitivity,
+                  constraint consistency.
+                </li>
+              </ul>
+            </div>
+            <div className="rounded-xl border border-white/10 bg-black/20 p-3">
+              <div className="text-[11px] uppercase tracking-wide text-zinc-500">
+                Почему это важно
+              </div>
+              <p className="mt-1.5 text-xs leading-snug text-zinc-300">
+                Видео-генератор и MuZero оба формально «world models», но один —
+                L2 только в смысле long-horizon coherence (без intervention
+                sensitivity), а второй — наоборот. Рамка показывает, какого
+                planner-критичного признака не хватает и где нужны constraints,
+                верификаторы или L3-loop с пересмотром модели.
+              </p>
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-white/10 bg-gradient-to-br from-indigo-500/10 via-fuchsia-500/5 to-amber-500/10 p-3">
+            <div className="flex flex-wrap items-baseline gap-2">
+              <span className="text-[11px] uppercase tracking-wide text-zinc-400">
+                Контур будущей world model
+              </span>
+              <span className="text-[11px] text-zinc-500">
+                композиция компонентов из всех семей
+              </span>
+            </div>
+            <div className="mt-2 flex flex-wrap items-center gap-1.5 text-xs">
+              {FUTURE_STACK.map((s, i, arr) => (
+                <React.Fragment key={s}>
+                  <span className="rounded-lg border border-white/10 bg-black/40 px-2 py-1 text-zinc-200">
+                    {s}
+                  </span>
+                  {i < arr.length - 1 && (
+                    <span className="text-zinc-600">→</span>
+                  )}
+                </React.Fragment>
+              ))}
+            </div>
+            <p className="mt-2 text-xs leading-snug text-zinc-400">
+              Сильная world model вероятно будет гибридом: генеративная
+              видео-симуляция даст rich prior, object-centric слой —
+              структурные переменные, causal — интервенции и counterfactuals,
+              Bayesian belief — неопределённость, hierarchy — длинный горизонт,
+              а L3-evolver-loop позволит пересматривать стэк по новой evidence.
+            </p>
+          </div>
         </div>
-      </div>
+      )}
     </section>
   );
 }
@@ -822,6 +916,12 @@ export default function WorldModelsMapSPA() {
   const [regime, setRegime] = useState("All");
   const [query, setQuery] = useState("");
   const [sortBy, setSortBy] = useState("horizon");
+  const [filtersOpen, setFiltersOpen] = useState(true);
+
+  const activeFilterChips = [];
+  if (cluster !== "All") activeFilterChips.push(cluster);
+  if (level !== "All") activeFilterChips.push(level);
+  if (regime !== "All") activeFilterChips.push(regime);
 
   const filtered = useMemo(
     () => filterAndSortModels(TYPES, cluster, query, sortBy, level, regime),
@@ -888,12 +988,26 @@ export default function WorldModelsMapSPA() {
         <section className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[390px_1fr] lg:h-[calc(100vh-3rem)]">
           <aside className="space-y-4 lg:h-full lg:overflow-y-auto lg:pr-2 [scrollbar-gutter:stable]">
             <div className="rounded-[2rem] border border-white/10 bg-zinc-950/60 p-4 shadow-xl backdrop-blur lg:sticky lg:top-0 lg:z-10">
-              <div className="mb-3 flex items-center gap-2 font-semibold text-white">
+              <button
+                type="button"
+                onClick={() => setFiltersOpen((v) => !v)}
+                className="flex w-full items-center gap-2 text-left text-white"
+                aria-expanded={filtersOpen}
+              >
                 <FilterIcon className="h-4 w-4 text-white" />
-                Фильтры
-              </div>
+                <span className="font-semibold">Фильтры</span>
+                {activeFilterChips.length > 0 && (
+                  <span className="rounded-full bg-white/10 px-2 py-0.5 text-[11px] text-zinc-200">
+                    {activeFilterChips.join(" · ")}
+                  </span>
+                )}
+                <span className="ml-auto text-xs text-zinc-500">
+                  {filtered.length} / {TYPES.length}
+                </span>
+                <ChevronIcon open={filtersOpen} />
+              </button>
 
-              <div className="relative">
+              <div className="relative mt-3">
                 <SearchIcon className="absolute left-3 top-3 h-4 w-4 text-zinc-500" />
                 <input
                   value={query}
@@ -903,59 +1017,77 @@ export default function WorldModelsMapSPA() {
                 />
               </div>
 
-              <div className="mt-4">
-                <div className="text-xs uppercase tracking-wide text-zinc-500">
-                  Архитектурный кластер
-                </div>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {CLUSTERS.map((c) => (
-                    <Pill key={c} active={cluster === c} onClick={() => setCluster(c)}>
-                      {c}
-                    </Pill>
-                  ))}
-                </div>
-              </div>
+              {filtersOpen && (
+                <>
+                  <div className="mt-4">
+                    <div className="text-xs uppercase tracking-wide text-zinc-500">
+                      Архитектурный кластер
+                    </div>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {CLUSTERS.map((c) => (
+                        <Pill
+                          key={c}
+                          active={cluster === c}
+                          onClick={() => setCluster(c)}
+                        >
+                          {c}
+                        </Pill>
+                      ))}
+                    </div>
+                  </div>
 
-              <div className="mt-4">
-                <div className="text-xs uppercase tracking-wide text-zinc-500">
-                  Capability level
-                </div>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {LEVEL_FILTERS.map((l) => (
-                    <Pill key={l} active={level === l} onClick={() => setLevel(l)}>
-                      {l}
-                    </Pill>
-                  ))}
-                </div>
-              </div>
+                  <div className="mt-4">
+                    <div className="text-xs uppercase tracking-wide text-zinc-500">
+                      Capability level
+                    </div>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {LEVEL_FILTERS.map((l) => (
+                        <Pill
+                          key={l}
+                          active={level === l}
+                          onClick={() => setLevel(l)}
+                        >
+                          {l}
+                        </Pill>
+                      ))}
+                    </div>
+                  </div>
 
-              <div className="mt-4">
-                <div className="text-xs uppercase tracking-wide text-zinc-500">
-                  Governing-law regime
-                </div>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {REGIME_FILTERS.map((r) => (
-                    <Pill key={r} active={regime === r} onClick={() => setRegime(r)}>
-                      {r}
-                    </Pill>
-                  ))}
-                </div>
-              </div>
+                  <div className="mt-4">
+                    <div className="text-xs uppercase tracking-wide text-zinc-500">
+                      Governing-law regime
+                    </div>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {REGIME_FILTERS.map((r) => (
+                        <Pill
+                          key={r}
+                          active={regime === r}
+                          onClick={() => setRegime(r)}
+                        >
+                          {r}
+                        </Pill>
+                      ))}
+                    </div>
+                  </div>
 
-              <div className="mt-4">
-                <label className="text-sm text-zinc-400">Сортировать по параметру</label>
-                <select
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value)}
-                  className="mt-2 w-full rounded-2xl border border-white/10 bg-black/30 px-3 py-2 text-sm outline-none focus:border-white/40"
-                >
-                  {AXES.map((a) => (
-                    <option key={a.key} value={a.key}>
-                      {a.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
+                  <div className="mt-4">
+                    <label className="text-sm text-zinc-400">
+                      Сортировать по параметру
+                    </label>
+                    <select
+                      value={sortBy}
+                      onChange={(e) => setSortBy(e.target.value)}
+                      className="mt-2 w-full rounded-2xl border border-white/10 bg-black/30 px-3 py-2 text-sm outline-none focus:border-white/40"
+                    >
+                      {AXES.map((a) => (
+                        <option key={a.key} value={a.key}>
+                          {a.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </>
+              )}
             </div>
 
             <div className="grid grid-cols-1 gap-3">
@@ -973,36 +1105,6 @@ export default function WorldModelsMapSPA() {
           <main className="lg:h-full lg:overflow-y-auto lg:pr-2 [scrollbar-gutter:stable]">
             <DetailPanel model={selected} />
           </main>
-        </section>
-
-        <section className="mt-6 rounded-[2rem] border border-white/10 bg-white/[.05] p-5 md:p-6">
-          <h3 className="text-xl font-bold">Интегральная архитектура будущего</h3>
-          <div className="mt-4 flex flex-wrap items-center gap-2 text-sm">
-            {[
-              "multimodal sensors",
-              "object-centric spatial memory",
-              "causal-relational graph",
-              "belief state",
-              "hierarchical skills",
-              "generative renderer",
-              "counterfactual planner",
-              "policy / LLM agent",
-            ].map((s, i, arr) => (
-              <React.Fragment key={s}>
-                <span className="rounded-2xl border border-white/10 bg-black/30 px-3 py-2 text-zinc-200">
-                  {s}
-                </span>
-                {i < arr.length - 1 && <span className="text-zinc-500">→</span>}
-              </React.Fragment>
-            ))}
-          </div>
-          <p className="mt-4 leading-relaxed text-zinc-300">
-            Практически сильная world model, вероятно, будет гибридом: генеративная
-            видео/симуляционная модель даст rich prior, object-centric слой даст структурные
-            переменные, causal слой — интервенции и counterfactuals, Bayesian belief —
-            неопределённость, hierarchy — длинный горизонт, а planner/policy превратит симуляцию в
-            действие.
-          </p>
         </section>
       </div>
     </div>

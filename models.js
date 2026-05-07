@@ -12,6 +12,7 @@ import {
   WorkflowIcon,
   AtomIcon,
   UsersIcon,
+  NetworkIcon,
   SparklesIcon,
 } from "./icons.jsx";
 
@@ -950,6 +951,75 @@ export const TYPES = [
       { name: "Machine Theory of Mind — Rabinowitz et al.", url: "https://arxiv.org/abs/1802.07740" },
       { name: "CICERO — Bakhtin et al., Science 2022", url: "https://doi.org/10.1126/science.ade9097" },
       { name: "Generative Agents — Park et al., 2023", url: "https://arxiv.org/abs/2304.03442" },
+    ],
+  },
+  {
+    id: "social-sandbox",
+    title: "Social sandbox / generative society WM",
+    short:
+      "Симуляторы социумов: персонажи с памятью, reflection и нормами; emergent dynamics при scale (Generative Agents, Sotopia, OASIS).",
+    icon: NetworkIcon,
+    color: "from-pink-500 to-fuchsia-600",
+    cluster: "Social",
+    tags: ["generative agents", "sandbox", "norms", "personas", "reflection"],
+    scores: {
+      representation: 4,
+      dynamics: 3,
+      planning: 3,
+      uncertainty: 3,
+      causality: 2,
+      horizon: 5,
+    },
+    level: "L2",
+    regimes: ["Social"],
+    l1Ops: { SI: true, FD: true, OD: false, ID: false },
+    l2Conditions: { coherence: 3, intervention: 4, constraint: 3 },
+    levelNote:
+      "L2 как sandbox-симулятор социума, не оппонента: тысячи агентов с устойчивыми персонами, эпизодической памятью и циклами reflection. Long-horizon coherence страдает от role drift и goal forgetting; constraint consistency — от того, что коммитменты в LLM легко «забываются» (FANToM, illusory ToM).",
+    formula:
+      "\\begin{aligned} S_t &= \\{(p_i,\\, m_i,\\, b_i,\\, g_i)\\}_{i=1}^{N},\\quad N \\in \\{25,\\, 1000,\\, 10^6\\} \\\\ s_{t+1} &\\propto \\textstyle\\prod_i \\pi_i(a_i \\mid b_i,\\, g_i,\\, m_i)\\, \\phi_{\\text{norm}}(s_{t+1}) \\end{aligned}",
+    pipeline: [
+      "personas + memory",
+      "perception",
+      "reflection / planning",
+      "dialogue / action",
+      "social state update",
+      "emergent dynamics",
+    ],
+    details:
+      "Где multi-agent / ToM моделирует оппонента изнутри агента, social sandbox моделирует социум как среду: что произойдёт, если запустить N агентов с такими ролями, такими целями и такими нормами. Generative Agents (Park et al., 2023) показали emergent дележ информации и социальную координацию на 25 агентах с reflective memory. Sotopia формализовал оценку социальных миров по 7 измерениям. ProjectSid и OASIS отмасштабировали до 1000 и 10^6 агентов с emergent governance, информационным каскадом и поляризацией. Silicon Sampling (Argyle et al.) показал, что LLM, обусловленные демографией, неплохо воспроизводят результаты социологических опросов. Базовый failure mode — отсутствие formal commitment tracking: агент даёт обещание и без последствий его нарушает.",
+    math: [
+      {
+        label: "social state",
+        tex: "S_t = \\{(p_i,\\, m_i,\\, b_i,\\, g_i)\\}_{i=1}^{N}",
+        desc: "Состояние мира — множество агентов с устойчивыми персонами p_i, памятью m_i (episodic + semantic), beliefs b_i и целями g_i. Поверх — глобальные нормы и роли как трактуемые констрейнты.",
+      },
+      {
+        label: "transition",
+        tex: "s_{t+1} \\propto \\textstyle\\prod_i \\pi_i(a_i \\mid b_i,\\, g_i,\\, m_i)\\, \\phi_{\\text{norm}}(s_{t+1})",
+        desc: "Локальные политики плюс глобальный normative compatibility ϕ_norm: нарушение коммитментов, выпадение из роли, забытое обещание — снижают вероятность траектории. На практике этот член часто равен 1 (нет проверки), отсюда illusory social coherence.",
+      },
+      {
+        label: "reflection",
+        tex: "m_i \\leftarrow \\mathrm{Reflect}(m_i,\\, \\text{recent events})",
+        desc: "Периодическое обобщение опыта в долговременную память (Park et al., 2023): без этого агенты быстро теряют цели и репутацию.",
+      },
+    ],
+    notation: [
+      { sym: "p_i", desc: "персона агента i (профиль, биография, стиль)" },
+      { sym: "m_i", desc: "эпизодическая + семантическая память" },
+      { sym: "b_i, g_i", desc: "beliefs и цели агента i" },
+      { sym: "\\phi_{\\text{norm}}(s)", desc: "normative compatibility (commitment tracking, role consistency)" },
+      { sym: "N", desc: "численность сообщества (25 → 10^6)" },
+      { sym: "\\mathrm{Reflect}", desc: "оператор reflection — синтез опыта в долгую память" },
+    ],
+    works: [
+      { name: "Generative Agents — Park et al., 2023", url: "https://arxiv.org/abs/2304.03442" },
+      { name: "Sotopia — Zhou et al., 2024", url: "https://arxiv.org/abs/2310.11667" },
+      { name: "Project Sid (1000 agents) — AL et al., 2024", url: "https://arxiv.org/abs/2411.00114" },
+      { name: "OASIS (1M agents) — Yang et al., 2024", url: "https://arxiv.org/abs/2411.11581" },
+      { name: "FANToM — illusory ToM, Kim et al., 2023", url: "https://arxiv.org/abs/2310.15421" },
+      { name: "Silicon Sampling — Argyle et al., 2023", url: "https://www.cambridge.org/core/journals/political-analysis/article/out-of-one-many-using-language-models-to-simulate-human-samples/035D7C8A55B237942FB6DBAD7CAA4E49" },
     ],
   },
   {
