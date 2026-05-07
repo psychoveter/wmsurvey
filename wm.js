@@ -9,19 +9,49 @@ import {
   FilterIcon,
   TargetIcon,
   BookIcon,
+  SparklesIcon,
+  LayersIcon,
 } from "./icons.jsx";
-import { AXES, TYPES, CLUSTERS } from "./models.js";
+import {
+  AXES,
+  TYPES,
+  CLUSTERS,
+  LEVELS,
+  REGIMES,
+  L1_OP_LABELS,
+  L2_COND_LABELS,
+} from "./models.js";
 
 /* ------------------------------ Pure helpers ------------------------------- */
 
-export function filterAndSortModels(models, cluster, query, sortBy) {
+export function filterAndSortModels(
+  models,
+  cluster,
+  query,
+  sortBy,
+  level = "All",
+  regime = "All"
+) {
   const q = (query || "").trim().toLowerCase();
 
   return models
     .filter((m) => cluster === "All" || m.cluster === cluster)
+    .filter((m) => level === "All" || m.level === level)
+    .filter(
+      (m) =>
+        regime === "All" ||
+        (Array.isArray(m.regimes) && m.regimes.includes(regime))
+    )
     .filter((m) => {
       if (!q) return true;
-      const haystack = [m.title, m.short, m.cluster, ...(m.tags || [])]
+      const haystack = [
+        m.title,
+        m.short,
+        m.cluster,
+        m.level,
+        ...(m.regimes || []),
+        ...(m.tags || []),
+      ]
         .join(" ")
         .toLowerCase();
       return haystack.includes(q);
@@ -288,6 +318,53 @@ function Radar({ model }) {
   );
 }
 
+function levelMeta(id) {
+  return LEVELS.find((l) => l.id === id);
+}
+
+function regimeMeta(id) {
+  return REGIMES.find((r) => r.id === id);
+}
+
+function LevelBadge({ level, size = "sm" }) {
+  const meta = levelMeta(level);
+  if (!meta) return null;
+  const cls =
+    size === "lg"
+      ? "px-3 py-1 text-sm"
+      : "px-2 py-0.5 text-[11px]";
+  return (
+    <span
+      className={`inline-flex items-center gap-1 rounded-full border font-semibold uppercase tracking-wide ${cls} ${meta.badge}`}
+      title={`${meta.id} — ${meta.name}: ${meta.short}`}
+    >
+      {meta.id}
+      {size === "lg" && (
+        <span className="text-zinc-200/80 font-normal normal-case tracking-normal">
+          {meta.name}
+        </span>
+      )}
+    </span>
+  );
+}
+
+function RegimeBadge({ regime, size = "sm" }) {
+  const meta = regimeMeta(regime);
+  if (!meta) return null;
+  const cls =
+    size === "lg"
+      ? "px-3 py-1 text-sm"
+      : "px-2 py-0.5 text-[11px]";
+  return (
+    <span
+      className={`inline-flex items-center rounded-full border ${cls} ${meta.badge}`}
+      title={`${meta.id}: ${meta.short}`}
+    >
+      {meta.id}
+    </span>
+  );
+}
+
 function ModelCard({ model, selected, onClick }) {
   const Icon = model.icon;
   return (
@@ -313,7 +390,15 @@ function ModelCard({ model, selected, onClick }) {
           <p className="mt-2 text-sm leading-relaxed text-zinc-300">{model.short}</p>
         </div>
       </div>
-      <div className="mt-4 flex flex-wrap gap-1.5">
+      {(model.level || (model.regimes && model.regimes.length > 0)) && (
+        <div className="mt-3 flex flex-wrap items-center gap-1.5">
+          {model.level && <LevelBadge level={model.level} />}
+          {(model.regimes || []).map((r) => (
+            <RegimeBadge key={r} regime={r} />
+          ))}
+        </div>
+      )}
+      <div className="mt-3 flex flex-wrap gap-1.5">
         {model.tags.slice(0, 4).map((tag) => (
           <span
             key={tag}
@@ -374,6 +459,136 @@ function NotationGlossary({ notation }) {
   );
 }
 
+function CapabilityProfile({ model }) {
+  if (!model.level && !model.regimes && !model.l1Ops && !model.l2Conditions) {
+    return null;
+  }
+  const lvl = levelMeta(model.level);
+  const ops = model.l1Ops || {};
+  const conds = model.l2Conditions || {};
+  return (
+    <div className="rounded-3xl border border-white/10 bg-white/[.05] p-4">
+      <h4 className="flex flex-wrap items-center gap-2 font-semibold text-white">
+        <SparklesIcon className="h-4 w-4 text-white" />
+        Способность × режим
+        <span className="text-xs font-normal text-zinc-500">
+          (по таксономии «levels × laws», arXiv:2604.22748)
+        </span>
+      </h4>
+
+      <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <div className="rounded-2xl border border-white/10 bg-black/25 p-3">
+          <div className="text-xs uppercase tracking-wide text-zinc-500">
+            Capability level
+          </div>
+          {lvl ? (
+            <>
+              <div className="mt-2 flex items-center gap-3">
+                <LevelBadge level={lvl.id} size="lg" />
+                <span className="text-sm text-zinc-300">{lvl.short}</span>
+              </div>
+              {model.levelNote && (
+                <p className="mt-2 text-sm leading-relaxed text-zinc-400">
+                  {model.levelNote}
+                </p>
+              )}
+            </>
+          ) : (
+            <p className="mt-2 text-sm text-zinc-400">— не размечено —</p>
+          )}
+        </div>
+
+        <div className="rounded-2xl border border-white/10 bg-black/25 p-3">
+          <div className="text-xs uppercase tracking-wide text-zinc-500">
+            Governing-law regimes
+          </div>
+          <div className="mt-2 flex flex-wrap items-center gap-1.5">
+            {(model.regimes || []).length > 0 ? (
+              (model.regimes || []).map((r) => (
+                <RegimeBadge key={r} regime={r} size="lg" />
+              ))
+            ) : (
+              <span className="text-sm text-zinc-400">—</span>
+            )}
+          </div>
+          <p className="mt-2 text-sm leading-relaxed text-zinc-400">
+            Регим определяет, какие инварианты должны соблюдаться при rollout
+            и как они проверяются (аналитически, исполнением, нормами или
+            экспериментом).
+          </p>
+        </div>
+      </div>
+
+      {(ops.SI !== undefined ||
+        ops.FD !== undefined ||
+        ops.OD !== undefined ||
+        ops.ID !== undefined) && (
+        <div className="mt-4 rounded-2xl border border-white/10 bg-black/25 p-3">
+          <div className="flex items-center justify-between gap-2">
+            <div className="text-xs uppercase tracking-wide text-zinc-500">
+              L1 operators
+            </div>
+            <div className="text-[11px] text-zinc-500">
+              state inference / forward dynamics / decoder / inverse dynamics
+            </div>
+          </div>
+          <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
+            {Object.entries(L1_OP_LABELS).map(([key, label]) => {
+              const on = !!ops[key];
+              return (
+                <div
+                  key={key}
+                  className={`flex items-center gap-2 rounded-xl border px-3 py-2 text-sm ${
+                    on
+                      ? "border-emerald-400/30 bg-emerald-500/10 text-emerald-200"
+                      : "border-white/10 bg-white/[.04] text-zinc-500"
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-2 w-2 rounded-full ${
+                      on ? "bg-emerald-400" : "bg-zinc-600"
+                    }`}
+                  />
+                  <span className="font-mono text-xs">{key}</span>
+                  <span className="truncate">{label}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {(conds.coherence !== undefined ||
+        conds.intervention !== undefined ||
+        conds.constraint !== undefined) && (
+        <div className="mt-4 rounded-2xl border border-white/10 bg-black/25 p-3">
+          <div className="flex items-center justify-between gap-2">
+            <div className="text-xs uppercase tracking-wide text-zinc-500">
+              L2 boundary conditions
+            </div>
+            <div className="text-[11px] text-zinc-500">по 5-балльной шкале</div>
+          </div>
+          <div className="mt-2 space-y-2">
+            {Object.entries(L2_COND_LABELS).map(([key, label]) => {
+              const v = conds[key];
+              if (v === undefined) return null;
+              return (
+                <div key={key}>
+                  <div className="mb-1 flex items-baseline justify-between text-sm">
+                    <span className="text-zinc-300">{label}</span>
+                    <span className="font-semibold text-white">{v}/5</span>
+                  </div>
+                  <ScoreBar value={v} />
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function DetailPanel({ model }) {
   const Icon = model.icon;
   return (
@@ -382,9 +597,20 @@ function DetailPanel({ model }) {
         <div className={`rounded-3xl bg-gradient-to-br ${model.color} p-4`}>
           <Icon className="h-7 w-7 text-white" />
         </div>
-        <div>
-          <div className="text-sm text-zinc-400">{model.cluster}</div>
-          <h2 className="text-2xl font-bold text-white md:text-3xl">{model.title}</h2>
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2 text-sm text-zinc-400">
+            <span>{model.cluster}</span>
+            {model.level && (
+              <>
+                <span className="text-zinc-600">·</span>
+                <LevelBadge level={model.level} />
+              </>
+            )}
+            {(model.regimes || []).map((r) => (
+              <RegimeBadge key={r} regime={r} />
+            ))}
+          </div>
+          <h2 className="mt-1 text-2xl font-bold text-white md:text-3xl">{model.title}</h2>
           <p className="mt-2 text-zinc-300 leading-relaxed">{model.short}</p>
         </div>
       </div>
@@ -461,6 +687,10 @@ function DetailPanel({ model }) {
         <NotationGlossary notation={model.notation} />
       </div>
 
+      <div className="mt-5">
+        <CapabilityProfile model={model} />
+      </div>
+
       <div className="mt-5 rounded-3xl border border-white/10 bg-white/[.04] p-4">
         <h4 className="font-semibold text-white">Ключевые параметры</h4>
         <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -479,17 +709,123 @@ function DetailPanel({ model }) {
   );
 }
 
+/* --------------------------- Taxonomy overview ---------------------------- */
+
+function TaxonomyOverview() {
+  return (
+    <section className="mt-6 rounded-[2rem] border border-white/10 bg-white/[.05] p-5 md:p-6">
+      <div className="flex flex-wrap items-center gap-3">
+        <LayersIcon className="h-5 w-5 text-white" />
+        <h2 className="text-xl font-bold text-white md:text-2xl">
+          Таксономия «levels × laws»
+        </h2>
+        <a
+          href="https://arxiv.org/abs/2604.22748"
+          target="_blank"
+          rel="noreferrer"
+          className="text-xs text-zinc-400 underline-offset-4 hover:text-white hover:underline"
+        >
+          Agentic World Modeling, arXiv:2604.22748
+        </a>
+      </div>
+      <p className="mt-2 max-w-4xl text-sm leading-relaxed text-zinc-300">
+        Архитектурные семьи слева — это «как устроена модель». Чтобы понять, на
+        что она способна, удобно добавить ортогональную ось: <em>capability
+        level</em> (что система умеет) и <em>governing-law regime</em> (какие
+        инварианты ей надо соблюдать). Эта пара даёт диагностический язык: где
+        модель «честно симулирует», где «просто красиво генерит», а где —
+        способна сама пересмотреть свой стэк.
+      </p>
+
+      <div className="mt-5 grid grid-cols-1 gap-4 lg:grid-cols-3">
+        {LEVELS.map((lvl) => (
+          <div
+            key={lvl.id}
+            className="rounded-2xl border border-white/10 bg-black/25 p-4"
+          >
+            <div className="flex items-center gap-2">
+              <LevelBadge level={lvl.id} size="lg" />
+              <span className="text-sm text-zinc-400">{lvl.short}</span>
+            </div>
+            <p className="mt-3 text-sm leading-relaxed text-zinc-300">{lvl.desc}</p>
+          </div>
+        ))}
+      </div>
+
+      <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {REGIMES.map((r) => (
+          <div
+            key={r.id}
+            className="rounded-2xl border border-white/10 bg-black/25 p-3"
+          >
+            <div className="flex items-center gap-2">
+              <RegimeBadge regime={r.id} size="lg" />
+            </div>
+            <p className="mt-2 text-sm leading-snug text-zinc-300">{r.short}</p>
+            <p className="mt-1 text-xs leading-snug text-zinc-500">{r.desc}</p>
+          </div>
+        ))}
+      </div>
+
+      <div className="mt-5 grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <div className="rounded-2xl border border-white/10 bg-black/20 p-3">
+          <div className="text-xs uppercase tracking-wide text-zinc-500">
+            Как читать карточку модели
+          </div>
+          <ul className="mt-2 space-y-1.5 text-sm text-zinc-300">
+            <li>
+              <span className="font-mono text-emerald-300">L1/L2/L3</span> —
+              максимальная стабильная capability семьи.
+            </li>
+            <li>
+              <span className="font-mono">Physical/Digital/Social/Scientific</span>{" "}
+              — какие регимы покрываются.
+            </li>
+            <li>
+              <span className="font-mono">SI / FD / OD / ID</span> — какие из 4
+              L1-операторов реально присутствуют (state inference, forward
+              dynamics, observation decoding, inverse dynamics).
+            </li>
+            <li>
+              три L2-полосы — qualitative оценка long-horizon coherence,
+              intervention sensitivity и constraint consistency.
+            </li>
+          </ul>
+        </div>
+        <div className="rounded-2xl border border-white/10 bg-black/20 p-3">
+          <div className="text-xs uppercase tracking-wide text-zinc-500">
+            Почему это важно
+          </div>
+          <p className="mt-2 text-sm leading-relaxed text-zinc-300">
+            Видео-генератор и MuZero оба формально «world models», но один
+            может быть L2 только в смысле long-horizon coherence (без
+            intervention sensitivity), а второй — наоборот. Эта рамка
+            показывает, какой именно planner-критичный признак отсутствует, и
+            подсказывает, где нужны constraints, верификаторы или L3-loop с
+            пересмотром модели.
+          </p>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 /* ---------------------------------- Main ---------------------------------- */
+
+const LEVEL_FILTERS = ["All", ...LEVELS.map((l) => l.id)];
+const REGIME_FILTERS = ["All", ...REGIMES.map((r) => r.id)];
 
 export default function WorldModelsMapSPA() {
   const [selectedId, setSelectedId] = useState("object-centric");
   const [cluster, setCluster] = useState("All");
+  const [level, setLevel] = useState("All");
+  const [regime, setRegime] = useState("All");
   const [query, setQuery] = useState("");
   const [sortBy, setSortBy] = useState("horizon");
 
   const filtered = useMemo(
-    () => filterAndSortModels(TYPES, cluster, query, sortBy),
-    [cluster, query, sortBy]
+    () => filterAndSortModels(TYPES, cluster, query, sortBy, level, regime),
+    [cluster, query, sortBy, level, regime]
   );
 
   const selected = getSelectedModel(TYPES, selectedId, filtered);
@@ -547,6 +883,8 @@ export default function WorldModelsMapSPA() {
           </div>
         </header>
 
+        <TaxonomyOverview />
+
         <section className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[390px_1fr] lg:h-[calc(100vh-3rem)]">
           <aside className="space-y-4 lg:h-full lg:overflow-y-auto lg:pr-2 [scrollbar-gutter:stable]">
             <div className="rounded-[2rem] border border-white/10 bg-zinc-950/60 p-4 shadow-xl backdrop-blur lg:sticky lg:top-0 lg:z-10">
@@ -565,12 +903,43 @@ export default function WorldModelsMapSPA() {
                 />
               </div>
 
-              <div className="mt-4 flex flex-wrap gap-2">
-                {CLUSTERS.map((c) => (
-                  <Pill key={c} active={cluster === c} onClick={() => setCluster(c)}>
-                    {c}
-                  </Pill>
-                ))}
+              <div className="mt-4">
+                <div className="text-xs uppercase tracking-wide text-zinc-500">
+                  Архитектурный кластер
+                </div>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {CLUSTERS.map((c) => (
+                    <Pill key={c} active={cluster === c} onClick={() => setCluster(c)}>
+                      {c}
+                    </Pill>
+                  ))}
+                </div>
+              </div>
+
+              <div className="mt-4">
+                <div className="text-xs uppercase tracking-wide text-zinc-500">
+                  Capability level
+                </div>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {LEVEL_FILTERS.map((l) => (
+                    <Pill key={l} active={level === l} onClick={() => setLevel(l)}>
+                      {l}
+                    </Pill>
+                  ))}
+                </div>
+              </div>
+
+              <div className="mt-4">
+                <div className="text-xs uppercase tracking-wide text-zinc-500">
+                  Governing-law regime
+                </div>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {REGIME_FILTERS.map((r) => (
+                    <Pill key={r} active={regime === r} onClick={() => setRegime(r)}>
+                      {r}
+                    </Pill>
+                  ))}
+                </div>
               </div>
 
               <div className="mt-4">

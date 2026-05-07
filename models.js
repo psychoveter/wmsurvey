@@ -24,6 +24,78 @@ export const AXES = [
   { key: "horizon", label: "Горизонт" },
 ];
 
+// ──────────────────────────────────────────────────────────────────────────
+// «Levels × Laws» таксономия из Agentic World Modeling (arXiv:2604.22748).
+// Это ортогональная архитектурным семьям ось: capability level (L1/L2/L3) и
+// governing-law regime (Physical / Digital / Social / Scientific).
+// ──────────────────────────────────────────────────────────────────────────
+
+export const LEVELS = [
+  {
+    id: "L1",
+    name: "Predictor",
+    short: "локальная одношаговая марковская предикция",
+    desc: "Оператор p_θ(z_t | z_{t-1}, a_t) и сопровождающие state inference, observation decoding и inverse dynamics. Гарантирует точность на одном шаге, не гарантирует когерентности при композиции.",
+    badge: "bg-sky-500/15 text-sky-200 border-sky-400/30",
+  },
+  {
+    id: "L2",
+    name: "Simulator",
+    short: "многошаговый rollout с интервенциями и проверкой инвариантов",
+    desc: "Композиция L1-операторов в траектории p̂(τ | z_0, a_{1:H}, c). Должен удовлетворять long-horizon coherence, intervention sensitivity и constraint consistency.",
+    badge: "bg-violet-500/15 text-violet-200 border-violet-400/30",
+  },
+  {
+    id: "L3",
+    name: "Evolver",
+    short: "пересмотр самой модели по новой evidence",
+    desc: "Цикл (M_t, d_t) → M_{t+1}: design → execute → observe → reflect. Diagnose, distill в reusable assets, governed validation. Ядро autonomous discovery.",
+    badge: "bg-amber-500/15 text-amber-200 border-amber-400/30",
+  },
+];
+
+export const REGIMES = [
+  {
+    id: "Physical",
+    short: "контактная динамика, кинематика, robotics, видеогенерация",
+    desc: "Контакт, гравитация, energy conservation, kinematic feasibility. Ground truth обычно проверяется аналитически или physics engine'ом.",
+    badge: "bg-sky-500/15 text-sky-200 border-sky-400/30",
+  },
+  {
+    id: "Digital",
+    short: "программные семантики: API, DOM, GUI, code execution",
+    desc: "Детерминированные программы, типы, state machines. Constraint check механически проверяем (запустить → сравнить).",
+    badge: "bg-emerald-500/15 text-emerald-200 border-emerald-400/30",
+  },
+  {
+    id: "Social",
+    short: "beliefs, goals, norms; multi-agent, диалоги, ToM",
+    desc: "Reflexive (вера меняет состояние) + normative (что должно быть). Коммитменты, роли, нормы, repeating self-reference.",
+    badge: "bg-amber-500/15 text-amber-200 border-amber-400/30",
+  },
+  {
+    id: "Scientific",
+    short: "латентные каузальные механизмы, экспериментальная валидация",
+    desc: "Управляющие уравнения известны лишь частично. Constraint check — через измерение / эксперимент, не через closed-form.",
+    badge: "bg-violet-500/15 text-violet-200 border-violet-400/30",
+  },
+];
+
+export const L1_OP_LABELS = {
+  SI: "State inference",
+  FD: "Forward dynamics",
+  OD: "Observation decoding",
+  ID: "Inverse dynamics",
+};
+
+export const L2_COND_LABELS = {
+  coherence: "Long-horizon coherence",
+  intervention: "Intervention sensitivity",
+  constraint: "Constraint consistency",
+};
+
+// ──────────────────────────────────────────────────────────────────────────
+
 export const TYPES = [
   {
     id: "latent-rl",
@@ -42,6 +114,12 @@ export const TYPES = [
       causality: 1,
       horizon: 4,
     },
+    level: "L2",
+    regimes: ["Physical"],
+    l1Ops: { SI: true, FD: true, OD: true, ID: false },
+    l2Conditions: { coherence: 4, intervention: 4, constraint: 2 },
+    levelNote:
+      "В режиме single-step prediction работает как L1; при тренировке политики на imagined rollouts превращается в L2-симулятор. До L3 не доходит — модель не пересматривает свою архитектуру по evidence.",
     formula:
       "\\begin{aligned} z_t &\\sim q_\\phi(z_t \\mid x_{\\le t},\\, a_{<t}) \\\\ z_{t+1} &\\sim p_\\theta(z_{t+1} \\mid z_t,\\, a_t),\\quad a_t \\sim \\pi(a_t \\mid z_t) \\end{aligned}",
     pipeline: [
@@ -104,6 +182,12 @@ export const TYPES = [
       causality: 1,
       horizon: 4,
     },
+    level: "L2",
+    regimes: ["Digital", "Physical"],
+    l1Ops: { SI: true, FD: true, OD: false, ID: false },
+    l2Conditions: { coherence: 5, intervention: 5, constraint: 3 },
+    levelNote:
+      "Полноценный L2 в правилах игр и Atari: latent-search в дереве — это интервенционные rollouts. Constraint consistency встроена в value-equivalence: latent отвечает за то, что важно для исхода.",
     formula:
       "\\begin{aligned} h_0 &= f_\\theta(o_{1:t}) \\\\ h_{k+1},\\, \\hat r_k &= g_\\theta(h_k,\\, a_k) \\\\ \\hat\\pi_k,\\, \\hat v_k &= p_\\theta(h_k) \\end{aligned}",
     pipeline: [
@@ -167,6 +251,12 @@ export const TYPES = [
       causality: 1,
       horizon: 3,
     },
+    level: "L2",
+    regimes: ["Physical"],
+    l1Ops: { SI: true, FD: true, OD: false, ID: false },
+    l2Conditions: { coherence: 3, intervention: 5, constraint: 2 },
+    levelNote:
+      "L2 на коротком receding-horizon. Long-horizon coherence слабая (короткое окно H), но intervention sensitivity максимальная — это и есть смысл MPC.",
     formula:
       "a^{*}_{0:H} = \\arg\\max_{a_{0:H}} \\sum_{t=0}^{H} \\gamma^{t}\\, \\hat r(z_t, a_t) + \\gamma^{H}\\, \\hat V(z_H)",
     pipeline: [
@@ -226,6 +316,12 @@ export const TYPES = [
       causality: 1,
       horizon: 3,
     },
+    level: "L2",
+    regimes: ["Physical"],
+    l1Ops: { SI: true, FD: true, OD: true, ID: false },
+    l2Conditions: { coherence: 4, intervention: 2, constraint: 2 },
+    levelNote:
+      "L2 в смысле long-horizon генерации, но intervention sensitivity и constraint consistency остаются слабыми: «look like the world» ≠ «look like the constraints» (см. survey §4.3 о failure modes).",
     formula:
       "p(x_{t+1:T} \\mid x_{\\le t}, a_{\\le t}, c) = \\prod_{i} p(\\tau_i \\mid \\tau_{<i}, c)",
     pipeline: [
@@ -284,6 +380,12 @@ export const TYPES = [
       causality: 2,
       horizon: 4,
     },
+    level: "L2",
+    regimes: ["Physical", "Digital"],
+    l1Ops: { SI: true, FD: true, OD: true, ID: true },
+    l2Conditions: { coherence: 4, intervention: 3, constraint: 2 },
+    levelNote:
+      "Единственная семья здесь, где inverse dynamics — основной операционный модуль (LAM). Это даёт явный «руль» в неразмеченном видео и поднимает intervention sensitivity, но constraint consistency всё ещё на уровне видео-генератора.",
     formula:
       "\\begin{aligned} \\hat a_t &\\sim q(\\hat a_t \\mid o_t,\\, o_{t+1}) \\\\ o_{t+1} &\\sim p(o_{t+1} \\mid o_{\\le t},\\, \\hat a_t,\\, \\text{prompt}) \\end{aligned}",
     pipeline: [
@@ -341,6 +443,12 @@ export const TYPES = [
       causality: 3,
       horizon: 4,
     },
+    level: "L2",
+    regimes: ["Physical"],
+    l1Ops: { SI: true, FD: true, OD: true, ID: false },
+    l2Conditions: { coherence: 4, intervention: 4, constraint: 4 },
+    levelNote:
+      "Композиционность даёт сильную constraint consistency: при правильной факторизации объекты не «плавятся». Хорошо обобщается на новые комбинации.",
     formula:
       "\\begin{aligned} S_t &= \\{o_t^{i}\\}_{i=1}^{N} \\\\ o_{t+1}^{i} &= f_\\theta\\!\\left(o_t^{i},\\; \\textstyle\\sum_{j \\ne i} m_\\theta(o_t^{i},\\, o_t^{j}),\\; a_t\\right) \\end{aligned}",
     pipeline: [
@@ -402,6 +510,12 @@ export const TYPES = [
       causality: 5,
       horizon: 5,
     },
+    level: "L2",
+    regimes: ["Physical", "Social", "Scientific"],
+    l1Ops: { SI: true, FD: true, OD: false, ID: false },
+    l2Conditions: { coherence: 4, intervention: 5, constraint: 5 },
+    levelNote:
+      "Лучший кандидат среди learned WM на роль шага к L3: интервенции и причинные правки графа — это и есть «реконструкция модели по evidence». Полноценный L3-loop обычно требует дополнительной petli causal discovery.",
     formula:
       "\\begin{aligned} X_i &:= f_i(\\mathrm{PA}_i,\\, U_i) \\\\ p\\!\\left(x' \\mid \\mathrm{do}(a),\\, x\\right) &\\ne p(x' \\mid a, x) \\end{aligned}",
     pipeline: [
@@ -463,6 +577,12 @@ export const TYPES = [
       causality: 2,
       horizon: 5,
     },
+    level: "L2",
+    regimes: ["Physical", "Digital"],
+    l1Ops: { SI: true, FD: true, OD: false, ID: false },
+    l2Conditions: { coherence: 5, intervention: 4, constraint: 3 },
+    levelNote:
+      "Главный выигрыш — long-horizon coherence: эффективная глубина rollout сокращается в число раз, равное средней длине навыка.",
     formula:
       "p(s_{t+K} \\mid s_t, \\omega) = \\prod_{k=0}^{K-1} p(s_{t+k+1} \\mid s_{t+k}, a_{t+k})",
     pipeline: [
@@ -521,6 +641,12 @@ export const TYPES = [
       causality: 2,
       horizon: 4,
     },
+    level: "L2",
+    regimes: ["Physical", "Scientific", "Social"],
+    l1Ops: { SI: true, FD: true, OD: true, ID: false },
+    l2Conditions: { coherence: 4, intervention: 4, constraint: 3 },
+    levelNote:
+      "Калиброванная неопределённость — ключевой ингредиент для перехода к L3: знать, где модель не знает, и направлять туда experiments.",
     formula:
       "b_{t+1}(s') = \\eta\\, p(o_{t+1} \\mid s') \\sum_{s} p(s' \\mid s, a_t)\\, b_t(s)",
     pipeline: [
@@ -580,6 +706,12 @@ export const TYPES = [
       causality: 2,
       horizon: 5,
     },
+    level: "L1",
+    regimes: ["Physical", "Digital", "Social"],
+    l1Ops: { SI: true, FD: false, OD: false, ID: false },
+    l2Conditions: { coherence: 5, intervention: 2, constraint: 2 },
+    levelNote:
+      "По сути — мощный модуль state inference (расширенный retrieval'ом): восстановление состояния по длинной истории. Сам по себе не делает rollout, но даёт persistence, без которой L2 быстро разваливается.",
     formula:
       "\\begin{aligned} z_t &= f(o_t,\\, h_{t-1},\\, R(M,\\, q_t)) \\\\ M &\\leftarrow \\mathrm{update}(M,\\, o_t,\\, z_t) \\end{aligned}",
     pipeline: [
@@ -640,6 +772,12 @@ export const TYPES = [
       causality: 4,
       horizon: 5,
     },
+    level: "L3",
+    regimes: ["Digital", "Physical"],
+    l1Ops: { SI: true, FD: true, OD: false, ID: false },
+    l2Conditions: { coherence: 5, intervention: 4, constraint: 5 },
+    levelNote:
+      "Из всех learned-семей наиболее близок к L3: symbolic rules — это first-class object, который можно править по evidence (Lakatos «hard core»). WorldCoder/CodeWM явно строят world model как код, проверяемый исполнением.",
     formula:
       "\\begin{aligned} P_1(s) \\wedge \\mathrm{action}(a) &\\;\\Rightarrow\\; P_2(s') \\\\ \\Pi^{*} &= \\arg\\min_{\\Pi}\\; \\mathrm{cost}\\!\\left(\\mathrm{Exec}(\\Pi,\\, W)\\right) \\end{aligned}",
     pipeline: [
@@ -679,6 +817,7 @@ export const TYPES = [
     ],
     works: [
       { name: "Neural-Symbolic Learning and Reasoning survey", url: "https://arxiv.org/abs/1711.03902" },
+      { name: "WorldCoder — Tang et al., 2024", url: "https://arxiv.org/abs/2402.12275" },
       { name: "STRIPS background", url: "https://ai.stanford.edu/~nilsson/OnlinePubs-Nils/PublishedPapers/strips.pdf" },
     ],
   },
@@ -699,6 +838,12 @@ export const TYPES = [
       causality: 4,
       horizon: 4,
     },
+    level: "L2",
+    regimes: ["Physical"],
+    l1Ops: { SI: true, FD: true, OD: false, ID: false },
+    l2Conditions: { coherence: 5, intervention: 5, constraint: 5 },
+    levelNote:
+      "Эталон constraint consistency в физическом регимe: аналитическое ядро гарантирует energy conservation и kinematic feasibility, а residual закрывает sim-to-real gap.",
     formula:
       "s_{t+1} = F_{\\text{phys}}(s_t, a_t;\\, \\theta) + \\Delta_{\\psi}(s_t, a_t)",
     pipeline: [
@@ -758,6 +903,12 @@ export const TYPES = [
       causality: 3,
       horizon: 5,
     },
+    level: "L2",
+    regimes: ["Social"],
+    l1Ops: { SI: true, FD: true, OD: false, ID: false },
+    l2Conditions: { coherence: 4, intervention: 5, constraint: 3 },
+    levelNote:
+      "Высокая intervention sensitivity (другая стратегия — другой исход), но constraint consistency страдает: коммитменты, нормы и роли в LLM-симуляторах легко «забываются» (см. Sotopia, FANToM).",
     formula:
       "\\begin{aligned} s' &\\sim p(s' \\mid s,\\, a^{1}, \\ldots, a^{n}) \\\\ a^{j} &\\sim \\pi_j(a \\mid b_j,\\, g_j) \\end{aligned}",
     pipeline: [
@@ -797,7 +948,8 @@ export const TYPES = [
     ],
     works: [
       { name: "Machine Theory of Mind — Rabinowitz et al.", url: "https://arxiv.org/abs/1802.07740" },
-      { name: "Opponent Modeling in Deep RL survey", url: "https://arxiv.org/abs/2206.09961" },
+      { name: "CICERO — Bakhtin et al., Science 2022", url: "https://doi.org/10.1126/science.ade9097" },
+      { name: "Generative Agents — Park et al., 2023", url: "https://arxiv.org/abs/2304.03442" },
     ],
   },
   {
@@ -817,6 +969,12 @@ export const TYPES = [
       causality: 1,
       horizon: 3,
     },
+    level: "L1",
+    regimes: ["Physical"],
+    l1Ops: { SI: true, FD: true, OD: false, ID: false },
+    l2Conditions: { coherence: 3, intervention: 2, constraint: 2 },
+    levelNote:
+      "JEPA — это про state inference + представление будущего, не про многошаговый rollout. Сильный L1-фундамент для последующих L2-семей; для управления нужен внешний planner.",
     formula:
       "\\begin{aligned} \\hat y &= f_\\theta(x_{\\text{ctx}}) \\approx g(x_{\\text{fut}}) \\\\ E_\\theta(z_t,\\, a_t,\\, z_{t+1}) &\\to \\min \\;\\;\\text{for valid transitions} \\end{aligned}",
     pipeline: [
@@ -858,6 +1016,211 @@ export const TYPES = [
       { name: "I-JEPA — Assran et al., 2023", url: "https://arxiv.org/abs/2301.08243" },
       { name: "A Path Towards Autonomous Machine Intelligence — LeCun", url: "https://openreview.net/forum?id=BZ5a1r-kVsf" },
       { name: "Energy-Based Models overview — LeCun et al.", url: "http://yann.lecun.com/exdb/publis/pdf/lecun-06.pdf" },
+    ],
+  },
+
+  // ──────────────────────────────────────────────────────────────────────
+  // Дополнения по «Agentic World Modeling» (arXiv:2604.22748): покрытие
+  // L2-Digital, L2-Scientific и L3-Evolver, которых раньше явно не было.
+  // ──────────────────────────────────────────────────────────────────────
+
+  {
+    id: "digital-agents",
+    title: "Digital-world WM (web/GUI/code)",
+    short:
+      "Модель мира — программа, API, DOM и файловая система; transitions проверяются исполнением.",
+    icon: WorkflowIcon,
+    color: "from-emerald-500 to-cyan-500",
+    cluster: "Agents",
+    tags: ["web", "GUI", "code", "OSWorld", "SWE-bench", "WebArena"],
+    scores: {
+      representation: 4,
+      dynamics: 4,
+      planning: 4,
+      uncertainty: 2,
+      causality: 4,
+      horizon: 4,
+    },
+    level: "L2",
+    regimes: ["Digital"],
+    l1Ops: { SI: true, FD: true, OD: false, ID: true },
+    l2Conditions: { coherence: 3, intervention: 5, constraint: 5 },
+    levelNote:
+      "Цифровой мир уникален тем, что constraint check механически проверяем (тесты, типы, exit codes). Поэтому intervention sensitivity и constraint consistency в этом регимe максимальные; слабое место — long-horizon coherence на длинных эпизодах (state aliasing, brittle UI).",
+    formula:
+      "\\begin{aligned} z_t &= \\phi\\!\\left(\\text{DOM}_t \\cup \\text{state}_t \\cup \\text{trace}_t\\right) \\\\ z_{t+1} &= \\mathrm{Exec}(z_t,\\, a_t),\\quad v(z_{t+1}) \\in \\{\\text{ok},\\, \\text{err},\\, \\text{spec\\_fail}\\} \\end{aligned}",
+    pipeline: [
+      "DOM/AST/screen",
+      "structured state",
+      "tool/action",
+      "exec env",
+      "verifier",
+      "next state",
+    ],
+    details:
+      "Цифровой мир — это формальный артефакт: код, API-контракты, UI-state machines, файловая система. World model для таких сред обычно гибридная: нейронная perception (что я вижу на экране, что в DOM, что в трейсе) плюс детерминированный executor (browser, OS, interpreter). Главный плюс — verifiability: каждое действие проверяется запуском, что даёт почти идеальный constraint signal. Главные провалы — длинные эпизоды (state aliasing, race conditions), brittle UI и долгая обратная связь. Сюда попадают WebDreamer, WebArena/OSWorld-подобные simulator'ы, SWE-agent и family code-as-WM (CodeWM, WorldCoder, gWorld, Code2World).",
+    math: [
+      {
+        label: "state",
+        tex: "z_t = \\phi(\\text{DOM}_t \\cup \\text{state}_t \\cup \\text{trace}_t)",
+        desc: "Стейт строится из видимого экрана/DOM, серверного состояния и истории трейса. Часто структурированный (JSON, AST), не чисто пиксельный — это упрощает планирование.",
+      },
+      {
+        label: "transition",
+        tex: "z_{t+1} = \\mathrm{Exec}(z_t,\\, a_t)",
+        desc: "Переход — это запуск команды/инструмента/API в реальной среде. Не нужно учить динамику: достаточно её симулировать через детерминированный движок.",
+      },
+      {
+        label: "verification",
+        tex: "v(z_{t+1}) \\in \\{\\mathrm{ok},\\; \\mathrm{err},\\; \\mathrm{spec\\_fail}\\}",
+        desc: "Каждый переход верифицируем: HTTP-коды, юнит-тесты, type checker, оракулы задач. Это даёт идеальный constraint signal — основа для regression-gated update в L3.",
+      },
+    ],
+    notation: [
+      { sym: "\\text{DOM}_t", desc: "видимая структура страницы / GUI" },
+      { sym: "\\text{AST}", desc: "синтаксическое дерево кода / диффа" },
+      { sym: "\\mathrm{Exec}(\\cdot)", desc: "детерминированное выполнение действия в среде" },
+      { sym: "c_{\\text{API}}", desc: "контракт API / типов / разрешений" },
+      { sym: "v(\\cdot)", desc: "верификатор: даёт ok / error / spec_fail" },
+    ],
+    works: [
+      { name: "WebArena — Zhou et al., 2024", url: "https://arxiv.org/abs/2307.13854" },
+      { name: "OSWorld — Xie et al., 2024", url: "https://arxiv.org/abs/2404.07972" },
+      { name: "SWE-agent — Yang et al., 2024", url: "https://arxiv.org/abs/2405.15793" },
+      { name: "WebDreamer — Gu et al., 2025", url: "https://arxiv.org/abs/2411.06559" },
+      { name: "Agentic World Modeling, §4.2.2", url: "https://arxiv.org/abs/2604.22748" },
+    ],
+  },
+  {
+    id: "science-surrogate",
+    title: "Scientific surrogate WM",
+    short:
+      "Нейронные суррогаты физических/химических/биологических процессов: AlphaFold, GraphCast, MatterGen, NeuralPDE.",
+    icon: AtomIcon,
+    color: "from-indigo-400 to-blue-600",
+    cluster: "Science",
+    tags: ["AlphaFold", "GraphCast", "MatterGen", "PDE", "neural operator"],
+    scores: {
+      representation: 5,
+      dynamics: 5,
+      planning: 3,
+      uncertainty: 4,
+      causality: 3,
+      horizon: 5,
+    },
+    level: "L2",
+    regimes: ["Scientific"],
+    l1Ops: { SI: true, FD: true, OD: true, ID: false },
+    l2Conditions: { coherence: 5, intervention: 3, constraint: 4 },
+    levelNote:
+      "L2 как forward simulator: модель честно разворачивает динамику на больших горизонтах, но интервенции (счётно правильно отвечать на «что если параметр X»?) и экстраполяция за пределы тренировочного режима остаются открытой проблемой. Полноценный L3 в этой ветке — autonomous lab (см. evolver-l3).",
+    formula:
+      "\\begin{aligned} z_t &\\sim q_\\phi(z_t \\mid \\text{measurements}_{\\le t}) \\\\ z_{t+1} &= F_\\theta(z_t,\\, c_{\\text{laws}}) \\end{aligned}",
+    pipeline: [
+      "measurement / sequence / config",
+      "neural surrogate",
+      "structure / field / property",
+      "uncertainty",
+      "downstream search",
+    ],
+    details:
+      "В научном режиме governing equations известны лишь частично. World model — это нейронный суррогат, обученный на симуляциях или эксперименте: AlphaFold предсказывает 3D-структуру белка, GraphCast обгоняет ECMWF на 90% метрик и в тысячи раз быстрее, GNoME/MatterGen генерируют стабильные кристаллические материалы, FNO/Neural-GCM учатся PDE-операторам. Constraint validation тут не closed-form, а сравнение с измерением. Интервенционная семантика (real do(): изменить параметр и ожидать корректного смещения) и экстраполяция остаются основной болью, что и мотивирует L3.",
+    math: [
+      {
+        label: "surrogate",
+        tex: "z_{t+1} = F_\\theta(z_t,\\, c_{\\text{laws}})",
+        desc: "Нейронный оператор переходов: учится сопоставлять текущий стейт следующему, опираясь на конструкции (graph/Fourier/Swin-операторы) и регуляризацию законами сохранения.",
+      },
+      {
+        label: "calibration",
+        tex: "\\theta^{*} = \\arg\\min_{\\theta}\\; \\mathbb{E}\\!\\left[\\, \\| F_\\theta(z) - z_{\\text{exp}} \\|^2 \\,\\right]",
+        desc: "Параметры калибруются по ground truth: high-fidelity сим (DFT, спектральные solver'ы) и эксперимент.",
+      },
+      {
+        label: "uncertainty",
+        tex: "p(z_{t+1} \\mid z_t) = \\mathcal{N}\\!\\left(\\mu_\\theta(z_t),\\, \\Sigma_\\theta(z_t)\\right)",
+        desc: "Калиброванная неопределённость через ансамбли или Bayesian neural ops — обязательна для научной валидности и risk-aware experimental design (мост к L3).",
+      },
+    ],
+    notation: [
+      { sym: "F_\\theta", desc: "нейронный оператор переходов / суррогат" },
+      { sym: "c_{\\text{laws}}", desc: "известные физические инварианты (conservation, симметрии)" },
+      { sym: "z_{\\text{exp}}", desc: "наблюдение из эксперимента / high-fidelity сим" },
+      { sym: "\\Sigma_\\theta(z)", desc: "ковариация предсказания (uncertainty)" },
+    ],
+    works: [
+      { name: "AlphaFold 2 — Jumper et al., Nature 2021", url: "https://www.nature.com/articles/s41586-021-03819-2" },
+      { name: "GraphCast — Lam et al., Science 2023", url: "https://www.science.org/doi/10.1126/science.adi2336" },
+      { name: "MatterGen — Zeni et al., 2024", url: "https://arxiv.org/abs/2312.03687" },
+      { name: "Karniadakis et al., Physics-informed ML, 2021", url: "https://www.nature.com/articles/s42254-021-00314-5" },
+    ],
+  },
+  {
+    id: "evolver-l3",
+    title: "Evidence-driven evolver (L3)",
+    short:
+      "Системы, которые сами правят свой world model по новой evidence: AI Scientist, AlphaEvolve, autonomous wet-labs.",
+    icon: SparklesIcon,
+    color: "from-amber-400 to-rose-500",
+    cluster: "Meta",
+    tags: ["L3", "self-evolving", "autonomous discovery", "model revision"],
+    scores: {
+      representation: 5,
+      dynamics: 4,
+      planning: 5,
+      uncertainty: 5,
+      causality: 5,
+      horizon: 5,
+    },
+    level: "L3",
+    regimes: ["Physical", "Digital", "Social", "Scientific"],
+    l1Ops: { SI: true, FD: true, OD: true, ID: true },
+    l2Conditions: { coherence: 5, intervention: 5, constraint: 5 },
+    levelNote:
+      "L3 не заменяет L1/L2, а добавляет третий контур — пересмотр самой модели. На сегодня полноценного L3 в открытых системах почти нет: большинство «L3-подобных» проектов реализуют только часть петли (без governance, без rollback). Самое близкое — autonomous chemistry labs и AI Scientist.",
+    formula:
+      "\\mathcal{M}_t \\xrightarrow{\\;\\text{design}\\;} a_t \\xrightarrow{\\;\\text{execute}\\;} o_t \\xrightarrow{\\;\\text{observe}\\;} d_t \\xrightarrow{\\;\\text{reflect}\\;} \\mathcal{M}_{t+1}",
+    pipeline: [
+      "deployment + evidence d_t",
+      "failure diagnosis",
+      "hypothesis space H",
+      "asset distillation",
+      "regression / canary validation",
+      "revised model M_{t+1}",
+    ],
+    details:
+      "Когда L2-симуляция систематически расходится с реальностью, L3-loop диагностирует, какой модуль виноват, генерирует кандидатов на правку (новая physics-routine, новый предикат, новый skill, новый closure), валидирует их через regression-suite и canary-rollout, и закрепляет как persistent asset. Соответствует Lakatos-различию: малые аномалии абсорбируются «protective belt» (параметры), систематические — требуют правки «hard core» (архитектура, инварианты). Примеры: AI Scientist (Lu et al., 2024) автоматически запускает эксперименты и переписывает гипотезы; AlphaEvolve эволюционирует код для алгоритмических открытий; автономные химические лаборатории Boiko et al. (Nature 2023) сами планируют синтез и обновляют kinetic model.",
+    math: [
+      {
+        label: "evolution step",
+        tex: "(\\mathcal{M}_t,\\, d_t)\\;\\to\\;\\mathcal{M}_{t+1}",
+        desc: "Полный шаг: из текущего модельного стэка M_t и накопленных свидетельств d_t (трейсы, ошибки, тесты) собирается следующая версия M_{t+1}.",
+      },
+      {
+        label: "diagnose",
+        tex: "h^{*} = \\arg\\max_{h \\in \\mathcal{H}}\\; P(d_t \\mid h,\\, \\mathcal{M}_t)",
+        desc: "Diagnose: ищем гипотезу h в пространстве правок H, которая лучше всего объясняет наблюдаемые провалы. Это — Duhem-Quine: винить надо конкретный модуль, а не «всю модель».",
+      },
+      {
+        label: "validate",
+        tex: "\\mathcal{M}_{t+1} = h^{*} \\oplus \\mathcal{M}_t,\\;\\;\\text{if}\\;\\; \\mathcal{L}_{\\text{regression}}(\\mathcal{M}_{t+1}) \\le \\tau",
+        desc: "Закрепляем правку только если она проходит regression suite и canary-критерии. Иначе rollback. Это защита от paradigm-collapse и accidental regressions.",
+      },
+    ],
+    notation: [
+      { sym: "\\mathcal{M}_t", desc: "world-model stack на шаге t (модули, веса, правила)" },
+      { sym: "d_t", desc: "deployment evidence: трейсы, ошибки, контрпримеры" },
+      { sym: "\\mathcal{H}", desc: "пространство гипотез о правках (новые модули, законы, правила)" },
+      { sym: "h^{*}", desc: "выбранная гипотеза-правка" },
+      { sym: "\\oplus", desc: "оператор применения правки к стэку" },
+      { sym: "\\mathcal{L}_{\\text{regression}}", desc: "loss на regression-наборе (поведение на старых задачах)" },
+      { sym: "\\tau", desc: "порог приёмки на regression-тестах" },
+    ],
+    works: [
+      { name: "Agentic World Modeling — survey, §5", url: "https://arxiv.org/abs/2604.22748" },
+      { name: "AI Scientist — Lu et al., 2024", url: "https://arxiv.org/abs/2408.06292" },
+      { name: "Autonomous chemistry — Boiko et al., Nature 2023", url: "https://www.nature.com/articles/s41586-023-06792-0" },
+      { name: "AlphaEvolve — DeepMind, 2025", url: "https://deepmind.google/discover/blog/alphaevolve-a-gemini-powered-coding-agent-for-designing-advanced-algorithms/" },
     ],
   },
 ];
